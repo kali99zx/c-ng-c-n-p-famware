@@ -1,0 +1,986 @@
+# Simple workflow for deploying static content to GitHub Pages
+name: Deploy static content to Pages
+
+on:
+  # Runs on pushes targeting the default branch
+  push:
+    branches: ["main"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRẦN TIÊN - CYBER AUTOFLASH PLATFORM v5.0 (FSOCIETY ULTIMATE)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Orbitron:wght@400;600;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <!-- esptool-js CDN -->
+    <script src="https://unpkg.com/esptool-js@0.4.3/bundle.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        hack: {
+                            bg: '#02040a',
+                            card: '#080d1a',
+                            panel: '#0e172a',
+                            border: '#162b4d',
+                            green: '#00ff66',
+                            greenGlow: '#00ff88',
+                            cyan: '#00f0ff',
+                            red: '#ff0033',
+                            redGlow: '#ff0055',
+                            yellow: '#ffe600',
+                            purple: '#b000ff'
+                        }
+                    },
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        mono: ['Share Tech Mono', 'Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #02040a;
+            color: #00ff66;
+            overflow-x: hidden;
+        }
+
+        #matrixCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 0;
+            opacity: 0.22;
+            pointer-events: none;
+        }
+
+        .crt-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%);
+            background-size: 100% 4px;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .cyber-box {
+            position: relative;
+            background: rgba(8, 13, 26, 0.92);
+            backdrop-filter: blur(14px);
+            border: 1px solid #162b4d;
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.08);
+        }
+
+        .cyber-box-red {
+            border: 1px solid #ff0033;
+            box-shadow: 0 0 20px rgba(255, 0, 51, 0.15);
+        }
+
+        .cyber-box::before {
+            content: '';
+            position: absolute;
+            top: -1px; left: -1px;
+            width: 8px; height: 8px;
+            border-top: 2px solid #00ff66;
+            border-left: 2px solid #00ff66;
+        }
+
+        .cyber-box::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; right: -1px;
+            width: 8px; height: 8px;
+            border-bottom: 2px solid #00f0ff;
+            border-right: 2px solid #00f0ff;
+        }
+
+        .cyber-btn {
+            position: relative;
+            transition: all 0.2s ease;
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+        }
+
+        .cyber-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            filter: drop-shadow(0 0 12px rgba(0, 255, 102, 0.6));
+        }
+
+        .fsociety-glow {
+            box-shadow: 0 0 25px rgba(255, 0, 51, 0.5);
+            animation: pulseFsociety 2.5s infinite alternate;
+        }
+
+        @keyframes pulseFsociety {
+            0% { box-shadow: 0 0 10px rgba(255, 0, 51, 0.4); }
+            100% { box-shadow: 0 0 28px rgba(255, 0, 51, 0.85); }
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #02040a; }
+        ::-webkit-scrollbar-thumb { background: #162b4d; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00ff66; }
+    </style>
+</head>
+<body class="font-mono min-h-screen flex flex-col justify-between selection:bg-hack-red selection:text-white">
+
+    <!-- Matrix Animation Background -->
+    <canvas id="matrixCanvas"></canvas>
+    <div class="crt-overlay"></div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div class="relative z-10 flex flex-col min-h-screen">
+
+        <!-- HEADER -->
+        <header class="border-b border-hack-border bg-hack-bg/95 backdrop-blur-md sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+                
+                <!-- BRANDING & LOGO -->
+                <div class="flex items-center space-x-3">
+                    <div class="relative group cursor-pointer" title="Ẩn/Hiện Avatar" onclick="toggleAvatarVisibility()">
+                        <div id="fsocietyAvatarBox" class="w-12 h-12 rounded-full overflow-hidden border-2 border-hack-red fsociety-glow bg-black flex items-center justify-center transition-all duration-300">
+                            <!-- Logo / Avatar SVG -->
+                            <svg viewBox="0 0 100 100" class="w-full h-full p-0.5">
+                                <circle cx="50" cy="50" r="48" fill="#110000" stroke="#ff0033" stroke-width="3"/>
+                                <circle cx="50" cy="50" r="38" fill="none" stroke="#ff0033" stroke-width="1.5" stroke-dasharray="4,2"/>
+                                <rect x="30" y="14" width="40" height="20" rx="2" fill="#1a1a1a" stroke="#ffffff" stroke-width="1.5"/>
+                                <rect x="24" y="32" width="52" height="5" rx="2.5" fill="#ff0033"/>
+                                <ellipse cx="50" cy="56" rx="22" ry="24" fill="#ffffff"/>
+                                <path d="M34 60 Q 42 54 50 62 Q 58 54 66 60 Q 58 68 50 64 Q 42 68 34 60 Z" fill="#1a1a1a"/>
+                                <ellipse cx="40" cy="48" rx="4" ry="5" fill="#1a1a1a"/>
+                                <ellipse cx="60" cy="48" rx="4" ry="5" fill="#1a1a1a"/>
+                                <path d="M42 76 L 50 80 L 42 84 Z M 58 76 L 50 80 L 58 84 Z" fill="#ff0033"/>
+                                <circle cx="50" cy="80" r="2" fill="#ffffff"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="font-orbitron font-extrabold text-lg md:text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-hack-red via-hack-green to-hack-cyan drop-shadow-[0_0_10px_rgba(255,0,51,0.5)]">
+                                TRẦN TIÊN // CYBER PLATFORM
+                            </h1>
+                            <span class="text-[10px] font-mono px-2 py-0.5 bg-red-950/80 border border-hack-red text-hack-red rounded font-bold">v5.0 ULTIMATE</span>
+                        </div>
+                        <p class="text-xs text-slate-400 font-mono flex items-center gap-2 mt-0.5">
+                            <span>HACKER AUTOMATION SYSTEM</span>
+                            <span class="text-hack-cyan">•</span>
+                            <span class="text-hack-green">MULTI-DEVICE FLASH ENGINE</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- SOCIAL & CONTACTS -->
+                <div class="flex items-center gap-2 text-xs font-mono">
+                    <a href="https://facebook.com/vuc.google.comx.remxi.sky" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 bg-blue-950/60 border border-blue-600 text-blue-400 hover:bg-blue-600 hover:text-white rounded flex items-center gap-1.5 transition-all shadow-[0_0_8px_rgba(59,130,246,0.3)]">
+                        <i class="fa-brands fa-facebook text-sm"></i>
+                        <span class="hidden sm:inline">FB:</span>
+                        <span class="font-bold">vuc.google.comx.remxi.sky</span>
+                    </a>
+                    
+                    <button onclick="copyZalo()" title="Click để chép SĐT Zalo" class="px-3 py-1.5 bg-emerald-950/60 border border-emerald-500 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded flex items-center gap-1.5 transition-all shadow-[0_0_8px_rgba(16,185,129,0.3)]">
+                        <i class="fa-solid fa-comment-dots text-sm"></i>
+                        <span>Zalo:</span>
+                        <span class="font-bold" id="zaloNumText">0328795804</span>
+                    </button>
+                </div>
+
+                <!-- SERIAL & ADMIN BUTTONS -->
+                <div class="flex items-center gap-3">
+                    <div id="statusBadge" class="px-3 py-1.5 rounded text-xs font-mono border bg-red-950/70 text-red-400 border-red-800 flex items-center gap-2">
+                        <span id="statusDot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                        <span id="statusText">DISCONNECTED</span>
+                    </div>
+
+                    <button id="btnConnect" onclick="toggleConnect()" class="cyber-btn px-4 py-2 font-orbitron font-bold text-xs bg-hack-green text-black hover:bg-hack-greenGlow shadow-[0_0_12px_rgba(0,255,102,0.4)] flex items-center gap-2">
+                        <i class="fa-solid fa-plug"></i>
+                        <span id="btnConnectText">CONNECT</span>
+                    </button>
+
+                    <button id="btnAdminModal" onclick="openAdminModal()" class="cyber-btn px-3 py-2 font-orbitron font-bold text-xs bg-red-950/80 border border-hack-red text-hack-red hover:bg-hack-red hover:text-white transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(255,0,51,0.3)]">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span id="adminBtnText">ADMIN</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
+
+            <!-- HARDWARE ILLUSTRATION BANNER -->
+            <div class="cyber-box p-4 rounded-lg flex flex-col md:flex-row items-center justify-between gap-4 border-l-4 border-l-hack-red">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-microchip text-hack-red"></i>
+                        <h2 class="font-orbitron font-bold text-sm text-white">TRƯNG BÀY THIẾT BỊ PHẦN CỨNG MẠNH MẼ</h2>
+                    </div>
+                    <p class="text-xs text-slate-400">Hệ thống hỗ trợ nạp tự động cho các dòng bo mạch ESP32, ESP32-S3 Touch LCD và BW16 chuyên dụng.</p>
+                </div>
+                <div class="flex items-center gap-3 overflow-x-auto py-1">
+                    <img src="https://placehold.co/120x70/080d1a/00ff66?text=ESP32-S3+CYD" alt="Device 1" class="rounded border border-hack-border h-14 object-cover">
+                    <img src="https://placehold.co/120x70/080d1a/ff0033?text=BW16+MADARA" alt="Device 2" class="rounded border border-hack-border h-14 object-cover">
+                    <img src="https://placehold.co/120x70/080d1a/00f0ff?text=BRUCE+BOARD" alt="Device 3" class="rounded border border-hack-border h-14 object-cover">
+                </div>
+            </div>
+
+            <!-- FIRMWARE LIST SELECTION -->
+            <div class="cyber-box cyber-box-red p-5 rounded-lg space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-hack-border pb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-hack-red text-lg"></i>
+                        <h2 class="font-orbitron font-bold text-base text-white tracking-wide">DANH MỤC FIRMWARE & MẠCH HỖ TRỢ</h2>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs font-mono">
+                        <span class="text-hack-green" id="firmwareCount">Loading...</span>
+                        <input type="text" id="searchFwInput" placeholder="Tìm kiếm firmware..." oninput="filterFirmwares()" class="bg-black border border-hack-border rounded px-2.5 py-1 text-slate-200 focus:outline-none focus:border-hack-red">
+                    </div>
+                </div>
+
+                <!-- Grid Firmwares -->
+                <div id="firmwareGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+
+            <!-- FLASH CONTROLLER & TERMINAL CONSOLE -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- FLASH PANEL (5 COLS) -->
+                <div class="lg:col-span-5 space-y-6">
+
+                    <div class="cyber-box p-5 rounded-lg space-y-4">
+                        <div class="flex items-center justify-between border-b border-hack-border pb-3">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-bolt text-hack-yellow text-lg"></i>
+                                <h3 class="font-orbitron font-bold text-sm text-white">BẢNG ĐIỀU KHIỂN NẠP FLASH</h3>
+                            </div>
+                            <span class="text-xs text-hack-green font-mono">WEB SERIAL</span>
+                        </div>
+
+                        <!-- Target Summary -->
+                        <div class="bg-black/80 border border-hack-border p-3.5 rounded space-y-1">
+                            <div class="text-[11px] text-slate-400">FIRMWARE ĐÃ CHỌN:</div>
+                            <div id="selectedTargetTitle" class="font-bold text-hack-cyan text-sm">Chưa chọn firmware</div>
+                            <div id="selectedTargetChip" class="text-xs text-slate-300 font-mono">Mạch: --</div>
+                            <div id="selectedTargetOffset" class="text-[11px] text-hack-yellow font-mono">Offset: 0x0</div>
+                        </div>
+
+                        <!-- Custom Bin Upload -->
+                        <div class="space-y-1">
+                            <label class="block text-xs text-slate-300">TẢI FILE .BIN TÙY CHỈNH</label>
+                            <input type="file" id="customBinFile" accept=".bin" onchange="handleCustomBin(event)" class="w-full text-xs text-slate-300 bg-hack-panel border border-hack-border rounded p-2 focus:outline-none focus:border-hack-cyan">
+                        </div>
+
+                        <!-- Offset & Baudrate -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-slate-300 mb-1">OFFSET ADDRESS</label>
+                                <select id="flashOffset" class="w-full bg-hack-panel border border-hack-border rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-hack-green">
+                                    <option value="0x0" selected>0x0 (Full Firmware)</option>
+                                    <option value="0x10000">0x10000 (Factory)</option>
+                                    <option value="0x8000">0x8000 (Partition Table)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-300 mb-1">BAUDRATE</label>
+                                <select id="flashBaud" class="w-full bg-hack-panel border border-hack-border rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-hack-green">
+                                    <option value="921600" selected>921600 (Siêu tốc)</option>
+                                    <option value="460800">460800 (Cao)</option>
+                                    <option value="115200">115200 (Chuẩn)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Progress -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs font-mono">
+                                <span class="text-slate-400">TIẾN TRÌNH:</span>
+                                <span id="progressPercent" class="text-hack-green font-bold">0%</span>
+                            </div>
+                            <div class="w-full bg-black h-3 border border-hack-border rounded p-0.5">
+                                <div id="progressBar" class="h-full bg-gradient-to-r from-hack-cyan via-hack-green to-hack-yellow w-0 transition-all duration-150"></div>
+                            </div>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <button id="btnFlash" onclick="flashSelectedFirmware()" class="md:col-span-2 py-3 cyber-btn font-orbitron font-bold text-xs bg-hack-yellow text-black hover:bg-yellow-300 flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-download"></i>
+                                <span>NẠP FIRMWARE NGAY</span>
+                            </button>
+                            <button id="btnErase" onclick="eraseChipFlash()" class="py-3 cyber-btn font-orbitron font-bold text-xs bg-red-950 border border-hack-red text-hack-red hover:bg-hack-red hover:text-white flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-trash-can"></i>
+                                <span>XÓA CHIP</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- WIFI CONFIG -->
+                    <div class="cyber-box p-5 rounded-lg space-y-3">
+                        <div class="flex items-center justify-between border-b border-hack-border pb-2">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-wifi text-hack-cyan text-base"></i>
+                                <h3 class="font-orbitron font-bold text-xs text-white">CẤU HÌNH WI-FI ĐỘNG (PREFERENCES)</h3>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 gap-2 text-xs">
+                            <input type="text" id="wifiSsid" placeholder="Tên Wi-Fi (SSID)..." class="bg-hack-panel border border-hack-border rounded p-2 text-slate-200">
+                            <input type="password" id="wifiPass" placeholder="Mật khẩu Wi-Fi..." class="bg-hack-panel border border-hack-border rounded p-2 text-slate-200">
+                        </div>
+                        <button id="btnSendWifi" onclick="sendWifiConfig()" disabled class="w-full py-2 cyber-btn font-orbitron font-bold text-xs bg-hack-cyan text-black hover:bg-cyan-300 disabled:opacity-40 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>GỬI CẤU HÌNH CHO ESP32</span>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- TERMINAL MONITOR (7 COLS) -->
+                <div class="lg:col-span-7 space-y-4 flex flex-col">
+                    <div class="cyber-box p-5 rounded-lg space-y-3 flex-grow flex flex-col">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-hack-border pb-3">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-terminal text-hack-green text-lg"></i>
+                                <h3 class="font-orbitron font-bold text-sm text-white">SERIAL MONITOR CONSOLE</h3>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <select id="terminalBaud" onchange="changeTerminalBaud()" class="bg-hack-panel border border-hack-border text-xs text-slate-200 rounded px-2 py-1">
+                                    <option value="115200" selected>115200 Baud</option>
+                                    <option value="921600">921600 Baud</option>
+                                </select>
+                                <button onclick="clearTerminal()" class="px-2 py-1 bg-hack-panel border border-hack-border text-xs rounded text-slate-300">Xóa Log</button>
+                            </div>
+                        </div>
+
+                        <div id="terminalOutput" class="w-full h-80 lg:h-96 bg-black/95 border border-hack-border rounded p-3 text-xs leading-relaxed overflow-y-auto text-hack-green space-y-1 font-mono">
+                            <div class="text-slate-500 italic">// TRẦN TIÊN CYBER PLATFORM v5.0 ULTIMATE // Sẵn sàng hoạt động.</div>
+                        </div>
+
+                        <div class="pt-1 flex gap-2">
+                            <div class="relative flex-1">
+                                <span class="absolute left-3 top-2 text-hack-green font-bold text-xs">&gt;</span>
+                                <input type="text" id="serialInput" placeholder="Nhập lệnh Serial..." onkeydown="handleSerialKeyDown(event)" class="w-full bg-hack-panel border border-hack-border rounded pl-7 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-hack-green">
+                            </div>
+                            <button onclick="sendCustomSerial()" id="btnSendSerial" disabled class="px-4 py-2 cyber-btn bg-hack-panel border border-hack-border text-slate-300 hover:border-hack-green hover:text-hack-green disabled:opacity-40 text-xs font-bold">GỬI</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="border-t border-hack-border bg-hack-bg/95 py-4 mt-6">
+            <div class="max-w-7xl mx-auto px-4 flex flex-wrap items-center justify-between text-xs text-slate-400 font-mono gap-3">
+                <div class="flex items-center gap-2">
+                    <span>DESIGNED BY <strong class="text-hack-red">TRẦN TIÊN</strong></span>
+                    <span>•</span>
+                    <span class="text-hack-cyan">ULTIMATE FSOCIETY</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span>Facebook: <strong class="text-blue-400">vuc.google.comx.remxi.sky</strong></span>
+                    <span>Zalo: <strong class="text-emerald-400">0328795804</strong></span>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- ADMIN MODAL -->
+    <div id="adminModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="cyber-box cyber-box-red max-w-md w-full p-6 space-y-4 rounded-lg">
+            <div class="flex items-center justify-between border-b border-hack-border pb-3">
+                <div class="flex items-center gap-2 text-hack-red font-orbitron font-bold">
+                    <i class="fa-solid fa-user-lock text-lg"></i>
+                    <span>QUẢN TRỊ VIÊN TRẦN TIẾN</span>
+                </div>
+                <button onclick="closeAdminModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-xs text-slate-300">Nhập mật khẩu Admin để truy cập bảng quản lý firmware và thiết bị:</p>
+            <div class="space-y-2">
+                <div class="relative">
+                    <input type="password" id="adminPasswordInput" placeholder="Mật khẩu Admin..." class="w-full bg-hack-panel border border-hack-border rounded p-2.5 text-xs text-slate-200 pr-10 focus:outline-none focus:border-hack-red">
+                    <button type="button" onclick="toggleAdminPassVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-white">
+                        <i id="eyeIcon" class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeAdminModal()" class="px-4 py-2 text-xs bg-hack-panel border border-hack-border text-slate-300 rounded">HỦY</button>
+                <button onclick="verifyAdminPassword()" class="px-5 py-2 cyber-btn font-orbitron font-bold text-xs bg-hack-red text-white">ĐĂNG NHẬP</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN DASHBOARD MODAL -->
+    <div id="adminDashboardModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="cyber-box cyber-box-red max-w-4xl w-full p-6 space-y-5 rounded-lg my-8">
+            <div class="flex items-center justify-between border-b border-hack-border pb-3">
+                <div class="flex items-center gap-2 text-hack-red font-orbitron font-bold text-base">
+                    <i class="fa-solid fa-gears"></i>
+                    <span>ADMIN DASHBOARD - TRẦN TIÊN CONTROL</span>
+                </div>
+                <button onclick="closeAdminDashboard()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <!-- Add firmware -->
+            <div class="bg-hack-panel/80 border border-hack-border p-4 rounded space-y-3">
+                <h4 class="font-orbitron font-bold text-xs text-hack-green">THÊM MỚI FIRMWARE HOẶC ẢNH MẠCH</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                    <div>
+                        <label class="block text-slate-300 mb-1">TÊN FIRMWARE</label>
+                        <input type="text" id="newFwTitle" placeholder="Ví dụ: CYD S3 Custom" class="w-full bg-black border border-hack-border rounded p-2 text-slate-200">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 mb-1">LOẠI CHIP</label>
+                        <select id="newFwChip" class="w-full bg-black border border-hack-border rounded p-2 text-slate-200">
+                            <option value="ESP32-S3">ESP32-S3</option>
+                            <option value="BW16 (RTL8720DN)">BW16 (RTL8720DN)</option>
+                            <option value="ESP8266">ESP8266</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 mb-1">OFFSET</label>
+                        <select id="newFwOffset" class="w-full bg-black border border-hack-border rounded p-2 text-slate-200">
+                            <option value="0x0">0x0</option>
+                            <option value="0x10000">0x10000</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <label class="block text-slate-300 mb-1">URL .BIN</label>
+                        <input type="text" id="newFwUrl" placeholder="firmwares/custom.bin" class="w-full bg-black border border-hack-border rounded p-2 text-slate-200">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 mb-1">URL ẢNH MINH HỌA MẠCH</label>
+                        <input type="text" id="newFwImage" placeholder="https://..." class="w-full bg-black border border-hack-border rounded p-2 text-slate-200">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">MÔ TẢ</label>
+                    <textarea id="newFwDesc" rows="2" class="w-full bg-black border border-hack-border rounded p-2 text-xs text-slate-200"></textarea>
+                </div>
+                <div class="flex justify-end">
+                    <button onclick="addNewFirmwareItem()" class="cyber-btn px-4 py-2 font-orbitron font-bold text-xs bg-hack-green text-black">+ THÊM FIRMWARE</button>
+                </div>
+            </div>
+
+            <!-- List -->
+            <div class="space-y-2">
+                <h4 class="font-orbitron font-bold text-xs text-white">DANH SÁCH HIỆN TẠI:</h4>
+                <div class="max-h-64 overflow-y-auto border border-hack-border rounded">
+                    <table class="w-full text-xs text-left text-slate-300">
+                        <thead class="bg-black text-hack-cyan font-mono border-b border-hack-border">
+                            <tr>
+                                <th class="p-2.5">Tên Firmware</th>
+                                <th class="p-2.5">Chip</th>
+                                <th class="p-2.5 text-center">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminFwTableBody" class="divide-y divide-hack-border"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-hack-border">
+                <button onclick="closeAdminDashboard()" class="px-5 py-2 cyber-btn font-orbitron font-bold text-xs bg-hack-panel border border-hack-border text-slate-300">ĐÓNG</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT ENGINE -->
+    <script>
+        function playBeep(freq = 600, duration = 0.08) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        const matrixChars = 'TRANTIENFSOCIETY0123456789@#$%&*';
+        const fontSize = 14;
+        let columns = Math.floor(canvas.width / fontSize);
+        let drops = Array(columns).fill(1);
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(2, 4, 10, 0.09)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ff0033';
+            ctx.font = fontSize + 'px monospace';
+            for (let i = 0; i < drops.length; i++) {
+                const text = matrixChars.charAt(Math.floor(Math.random() * matrixChars.length));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 33);
+
+        let firmwareDatabase = [
+            { id: '1', title: 'BRUCE MOD BW16 UCHIHA MADARA', chip: 'BW16 (RTL8720DN)', offset: '0x0', desc: 'Bản Bruce Mod giao diện Uchiha Madara cực đẹp Dual-Band.', url: 'firmwares/madara.bin', img: 'https://placehold.co/400x250/080d1a/ff0033?text=BW16+MADARA' },
+            { id: '2', title: 'Bruce_Madara_Smoochie', chip: 'BW16 / ESP32', offset: '0x0', desc: 'Firmware kết hợp Smoochie và Uchiha Madara.', url: 'firmwares/smoochie.bin', img: 'https://placehold.co/400x250/080d1a/00f0ff?text=SMOOCHIE+MADARA' },
+            { id: '3', title: 'BW16 bruce uart', chip: 'BW16 (RTL8720DN)', offset: '0x0', desc: 'Nạp qua giao tiếp UART chuẩn module BW16.', url: 'firmwares/uart.bin', img: 'https://placehold.co/400x250/080d1a/00ff66?text=BW16+UART' },
+            { id: '4', title: 'BW16 V4.4', chip: 'BW16 (RTL8720DN)', offset: '0x0', desc: 'Phiên bản ổn định v4.4 cho mạch BW16.', url: 'firmwares/v44.bin', img: 'https://placehold.co/400x250/080d1a/ffe600?text=BW16+V4.4' },
+            { id: '5', title: 'CYD S3 (Cheap Yellow Display)', chip: 'ESP32-S3', offset: '0x0', desc: 'Dành riêng cho mạch Cheap Yellow Display ESP32-S3.', url: 'firmwares/cyds3.bin', img: 'https://placehold.co/400x250/080d1a/b000ff?text=CYD+ESP32-S3' },
+            { id: '6', title: 'DEAUTHER 5GHZ WEB BW16', chip: 'BW16 (RTL8720DN)', offset: '0x0', desc: 'Deauther 5GHz quản lý qua giao diện Web.', url: 'firmwares/deauther5g.bin', img: 'https://placehold.co/400x250/080d1a/ff0033?text=DEAUTHER+5GHZ' },
+            { id: '7', title: 'DEAUTHER_OLED', chip: 'ESP8266 / ESP32', offset: '0x0', desc: 'Hiển thị màn hình OLED SSD1306.', url: 'firmwares/oled.bin', img: 'https://placehold.co/400x250/080d1a/00f0ff?text=DEAUTHER+OLED' },
+            { id: '8', title: 'Esp32s3 SuperMini Wifi Repeater', chip: 'ESP32-S3 SuperMini', offset: '0x0', desc: 'Kích sóng / Repeater siêu nhỏ.', url: 'firmwares/repeater.bin', img: 'https://placehold.co/400x250/080d1a/00ff66?text=ESP32-S3+REPEATER' },
+            { id: '9', title: 'ESP-HACK', chip: 'ESP32 / ESP8266', offset: '0x0', desc: 'Công cụ kiểm thử an ninh mạng đa năng.', url: 'firmwares/esphack.bin', img: 'https://placehold.co/400x250/080d1a/ff0033?text=ESP-HACK' },
+            { id: '10', title: 'firmware-bruce-main', chip: 'ESP32 / BW16', offset: '0x0', desc: 'Mã nguồn Bruce chính thức mới nhất.', url: 'firmwares/bruce.bin', img: 'https://placehold.co/400x250/080d1a/ffe600?text=BRUCE+MAIN' },
+            { id: '11', title: 'RF_JAMMER', chip: 'ESP32 / Sub-GHz', offset: '0x0', desc: 'Mô-đun kiểm thử nhiễu tần số RF radio.', url: 'firmwares/jammer.bin', img: 'https://placehold.co/400x250/080d1a/b000ff?text=RF+JAMMER' },
+            { id: '12', title: 'smoochie 1.47', chip: 'ESP32 Standard', offset: '0x0', desc: 'Smoochie phiên bản v1.47.', url: 'firmwares/smooch147.bin', img: 'https://placehold.co/400x250/080d1a/00f0ff?text=SMOOCHIE+1.47' },
+            { id: '13', title: 'smoochie tft 1.54', chip: 'ESP32 + TFT 1.54"', offset: '0x0', desc: 'Smoochie tích hợp màn hình TFT 1.54 inch.', url: 'firmwares/tft154.bin', img: 'https://placehold.co/400x250/080d1a/00ff66?text=SMOOCHIE+TFT' },
+            { id: '14', title: 'ESP32-S3 Cyber AI Movie v2.1', chip: 'ESP32-S3 (ILI9341 + FT6336G)', offset: '0x0', desc: 'Firmware Trần Tiến Cyber AI Movie 2.8 inch.', url: 'firmwares/cyberai.bin', img: 'https://placehold.co/400x250/080d1a/ff0033?text=TRAN+TIEN+CYBER+AI' }
+        ];
+
+        let selectedFirmware = firmwareDatabase[0];
+        let customBinBuffer = null;
+        let port = null;
+        let reader = null;
+        let writer = null;
+        let isConnected = false;
+
+        const ADMIN_PASSWORD_SECRET = "";
+        let isAdminLoggedIn = false;
+
+        function renderFirmwares(filterText = '') {
+            const grid = document.getElementById('firmwareGrid');
+            const countEl = document.getElementById('firmwareCount');
+            grid.innerHTML = '';
+            const list = firmwareDatabase.filter(fw => fw.title.toLowerCase().includes(filterText.toLowerCase()) || fw.chip.toLowerCase().includes(filterText.toLowerCase()));
+            countEl.textContent = `Tổng số: ${list.length}`;
+
+            list.forEach(fw => {
+                const isSelected = selectedFirmware && selectedFirmware.id === fw.id;
+                const card = document.createElement('div');
+                card.className = `bg-black/80 border ${isSelected ? 'border-hack-red bg-hack-panel/90 shadow-[0_0_18px_rgba(255,0,51,0.3)]' : 'border-hack-border hover:border-slate-500'} p-3 rounded flex flex-col justify-between cursor-pointer transition-all space-y-2 group`;
+                card.onclick = () => selectFirmware(fw.id);
+
+                card.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="relative h-28 w-full bg-black border border-hack-border overflow-hidden rounded">
+                            <img src="${fw.img}" alt="${fw.title}" class="w-full h-full object-cover group-hover:scale-105 transition-all opacity-85" onerror="this.src='https://placehold.co/400x250/080d1a/ff0033?text=DEVICE'">
+                            <span class="absolute top-1.5 right-1.5 text-[10px] font-mono font-bold px-1.5 py-0.5 bg-black/85 text-hack-cyan border border-hack-cyan rounded">${fw.chip}</span>
+                        </div>
+                        <div>
+                            <h3 class="font-orbitron font-bold text-xs text-white group-hover:text-hack-green line-clamp-1">${fw.title}</h3>
+                            <p class="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-snug">${fw.desc}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-2 border-t border-hack-border/60 text-[10px] font-mono">
+                        <span class="text-slate-400">Offset: ${fw.offset}</span>
+                        <span class="${isSelected ? 'text-hack-red font-bold' : 'text-slate-400'}">${isSelected ? '✓ ĐANG CHỌN' : 'CHỌN'}</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            updateSelectedSummary();
+        }
+
+        function filterFirmwares() {
+            renderFirmwares(document.getElementById('searchFwInput').value);
+        }
+
+        function selectFirmware(id) {
+            playBeep(800, 0.05);
+            const found = firmwareDatabase.find(f => f.id === id);
+            if (found) {
+                selectedFirmware = found;
+                customBinBuffer = null;
+                document.getElementById('customBinFile').value = '';
+                document.getElementById('flashOffset').value = selectedFirmware.offset || '0x0';
+                renderFirmwares(document.getElementById('searchFwInput').value);
+                logToTerminal(`📌 Đã chọn Firmware: ${selectedFirmware.title}`, 'info');
+            }
+        }
+
+        function updateSelectedSummary() {
+            if (selectedFirmware) {
+                document.getElementById('selectedTargetTitle').textContent = selectedFirmware.title;
+                document.getElementById('selectedTargetChip').textContent = `Chip: ${selectedFirmware.chip}`;
+                document.getElementById('selectedTargetOffset').textContent = `Offset: ${document.getElementById('flashOffset').value}`;
+            }
+        }
+
+        function handleCustomBin(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    customBinBuffer = e.target.result;
+                    logToTerminal(`📁 Đã nạp file BIN tùy chỉnh: ${file.name}`, 'info');
+                    document.getElementById('selectedTargetTitle').textContent = `TÙY CHỈNH: ${file.name}`;
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function toggleAvatarVisibility() {
+            const box = document.getElementById('fsocietyAvatarBox');
+            box.classList.toggle('opacity-20');
+        }
+
+        function copyZalo() {
+            navigator.clipboard.writeText("0328795804").then(() => {
+                playBeep(1000, 0.08);
+                const txt = document.getElementById('zaloNumText');
+                txt.textContent = "COPIED!";
+                setTimeout(() => txt.textContent = "0328795804", 1500);
+            });
+        }
+
+        async function toggleConnect() {
+            playBeep(700, 0.06);
+            if (isConnected) await disconnectPort();
+            else await connectPort();
+        }
+
+        async function connectPort() {
+            try {
+                const baud = parseInt(document.getElementById('terminalBaud').value);
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: baud });
+                isConnected = true;
+                updateConnectionUI(true);
+                logToTerminal(`✅ Đã mở cổng Serial thành công (${baud} Baud)!`, 'success');
+                readSerialLoop();
+            } catch (err) {
+                logToTerminal(`❌ Lỗi kết nối Serial: ${err.message}`, 'error');
+                updateConnectionUI(false);
+            }
+        }
+
+        async function disconnectPort() {
+            try {
+                if (reader) { await reader.cancel(); reader = null; }
+                if (writer) { writer.releaseLock(); writer = null; }
+                if (port) { await port.close(); port = null; }
+            } catch(e) {}
+            isConnected = false;
+            updateConnectionUI(false);
+            logToTerminal('🔌 Đã ngắt kết nối cổng Serial.', 'info');
+        }
+
+        async function readSerialLoop() {
+            const textDecoder = new TextDecoderStream();
+            port.readable.pipeTo(textDecoder.writable);
+            reader = textDecoder.readable.getReader();
+            try {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    if (value) logToTerminal(value, 'device');
+                }
+            } catch(e) {} finally { reader.releaseLock(); }
+        }
+
+        async function sendSerialData(data) {
+            if (!port || !port.writable) return;
+            const encoder = new TextEncoderStream();
+            encoder.readable.pipeTo(port.writable);
+            writer = encoder.writable.getWriter();
+            try {
+                await writer.write(data);
+                logToTerminal(`➡️ [SEND]: ${data.trim()}`, 'sent');
+            } catch(e) {} finally { writer.releaseLock(); }
+        }
+
+        function sendCustomSerial() {
+            const input = document.getElementById('serialInput');
+            if (input.value.trim()) {
+                sendSerialData(input.value + '\n');
+                input.value = '';
+            }
+        }
+
+        function handleSerialKeyDown(e) {
+            if (e.key === 'Enter') sendCustomSerial();
+        }
+
+        function sendWifiConfig() {
+            const ssid = document.getElementById('wifiSsid').value.trim();
+            const pass = document.getElementById('wifiPass').value.trim();
+            if (!ssid) { alert('Vui lòng nhập Tên Wi-Fi!'); return; }
+            sendSerialData(`${ssid}:${pass}\n`);
+            logToTerminal(`📡 Đã gửi cấu hình Wi-Fi [SSID: ${ssid}]`, 'info');
+        }
+
+        async function changeTerminalBaud() {
+            if (isConnected) {
+                await disconnectPort();
+                await connectPort();
+            }
+        }
+
+        async function flashSelectedFirmware() {
+            playBeep(900, 0.1);
+            if (!selectedFirmware && !customBinBuffer) { alert('Chưa chọn Firmware!'); return; }
+            if (isConnected) await disconnectPort();
+
+            try {
+                logToTerminal('🚀 BẮT ĐẦU NẠP FIRMWARE (WEB SERIAL)...', 'info');
+                const flashPort = await navigator.serial.requestPort();
+                const baud = parseInt(document.getElementById('flashBaud').value);
+
+                const esptoolTransport = new ESPOptions.Transport(flashPort);
+                const esploader = new ESPOptions.ESPLoader({
+                    transport: esptoolTransport,
+                    baudrate: baud,
+                    terminal: { clean: () => {}, writeLine: (d) => logToTerminal(d, 'flash'), write: (d) => logToTerminal(d, 'flash') }
+                });
+
+                await esploader.main();
+                let binaryArray;
+                if (customBinBuffer) {
+                    binaryArray = new Uint8Array(customBinBuffer);
+                } else {
+                    const res = await fetch(selectedFirmware.url).catch(() => null);
+                    if (res && res.ok) {
+                        binaryArray = new Uint8Array(await res.arrayBuffer());
+                    } else {
+                        logToTerminal('⚠️ Không tìm thấy file từ server thực tế. Nạp dữ liệu giả lập kiểm thử...', 'error');
+                        binaryArray = new Uint8Array(1024 * 32).fill(0x55);
+                    }
+                }
+
+                const offset = parseInt(document.getElementById('flashOffset').value, 16);
+                const binaryString = Array.from(binaryArray, b => String.fromCharCode(b)).join('');
+
+                await esploader.writeFlash({
+                    fileArray: [{ data: binaryString, address: offset }],
+                    flashSize: 'keep',
+                    eraseAll: false,
+                    compress: true,
+                    reportProgress: (fileIndex, written, total) => {
+                        const percent = Math.floor((written / total) * 100);
+                        document.getElementById('progressBar').style.width = `${percent}%`;
+                        document.getElementById('progressPercent').textContent = `${percent}%`;
+                    }
+                });
+
+                logToTerminal('✅ NẠP FIRMWARE THÀNH CÔNG!', 'success');
+                await esptoolTransport.disconnect();
+            } catch (err) {
+                logToTerminal(`❌ LỖI NẠP: ${err.message}`, 'error');
+            }
+        }
+
+        async function eraseChipFlash() {
+            if (!confirm('Xác nhận XÓA SẠCH bộ nhớ chip?')) return;
+            if (isConnected) await disconnectPort();
+            try {
+                logToTerminal('⚠️ Đang XÓA SẠCH bộ nhớ chip...', 'error');
+                const flashPort = await navigator.serial.requestPort();
+                const esptoolTransport = new ESPOptions.Transport(flashPort);
+                const esploader = new ESPOptions.ESPLoader({
+                    transport: esptoolTransport,
+                    baudrate: 115200,
+                    terminal: { clean: () => {}, writeLine: (d) => logToTerminal(d, 'flash'), write: (d) => logToTerminal(d, 'flash') }
+                });
+                await esploader.main();
+                await esploader.eraseFlash();
+                logToTerminal('✅ ĐÃ XÓA SẠCH CHIP THÀNH CÔNG!', 'success');
+                await esptoolTransport.disconnect();
+            } catch(err) {
+                logToTerminal(`❌ Lỗi xóa chip: ${err.message}`, 'error');
+            }
+        }
+
+        function updateConnectionUI(connected) {
+            const badge = document.getElementById('statusBadge');
+            const dot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const btnConnectText = document.getElementById('btnConnectText');
+
+            if (connected) {
+                badge.className = "px-3 py-1.5 rounded text-xs font-mono border bg-green-950/80 text-hack-green border-hack-green flex items-center gap-2";
+                dot.className = "w-2 h-2 rounded-full bg-hack-green animate-pulse";
+                statusText.textContent = "CONNECTED";
+                btnConnectText.textContent = "DISCONNECT";
+                document.getElementById('btnSendWifi').disabled = false;
+                document.getElementById('btnSendSerial').disabled = false;
+            } else {
+                badge.className = "px-3 py-1.5 rounded text-xs font-mono border bg-red-950/70 text-red-400 border-red-800 flex items-center gap-2";
+                dot.className = "w-2 h-2 rounded-full bg-red-500 animate-pulse";
+                statusText.textContent = "DISCONNECTED";
+                btnConnectText.textContent = "CONNECT";
+                document.getElementById('btnSendWifi').disabled = true;
+                document.getElementById('btnSendSerial').disabled = true;
+            }
+        }
+
+        function logToTerminal(msg, type = 'info') {
+            const term = document.getElementById('terminalOutput');
+            const line = document.createElement('div');
+            if (type === 'error') line.className = 'text-red-400 font-bold';
+            else if (type === 'success') line.className = 'text-hack-green font-bold';
+            else if (type === 'sent') line.className = 'text-hack-cyan italic';
+            else if (type === 'flash') line.className = 'text-hack-yellow';
+            else if (type === 'device') line.className = 'text-green-300 font-mono';
+            else line.className = 'text-slate-400';
+            line.textContent = msg;
+            term.appendChild(line);
+            term.scrollTop = term.scrollHeight;
+        }
+
+        function clearTerminal() {
+            document.getElementById('terminalOutput').innerHTML = '<div class="text-slate-500 italic">// Đã dọn dẹp log.</div>';
+        }
+
+        function openAdminModal() {
+            playBeep(600, 0.05);
+            if (isAdminLoggedIn) openAdminDashboard();
+            else document.getElementById('adminModal').classList.remove('hidden');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('adminModal').classList.add('hidden');
+        }
+
+        function toggleAdminPassVisibility() {
+            const passInput = document.getElementById('adminPasswordInput');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeIcon.className = 'fa-solid fa-eye-slash';
+            } else {
+                passInput.type = 'password';
+                eyeIcon.className = 'fa-solid fa-eye';
+            }
+        }
+
+        function verifyAdminPassword() {
+            const pwd = document.getElementById('adminPasswordInput').value;
+            if (pwd === ADMIN_PASSWORD_SECRET) {
+                playBeep(1200, 0.15);
+                isAdminLoggedIn = true;
+                closeAdminModal();
+                document.getElementById('adminBtnText').textContent = 'ADMIN CONTROL';
+                logToTerminal('🔑 Quản trị viên Trần Tiên đăng nhập thành công!', 'success');
+                openAdminDashboard();
+            } else {
+                playBeep(300, 0.2);
+                alert('Sai mật khẩu Admin!');
+            }
+        }
+
+        function openAdminDashboard() {
+            document.getElementById('adminDashboardModal').classList.remove('hidden');
+            renderAdminTable();
+        }
+
+        function closeAdminDashboard() {
+            document.getElementById('adminDashboardModal').classList.add('hidden');
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('adminFwTableBody');
+            tbody.innerHTML = '';
+            firmwareDatabase.forEach(fw => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-hack-panel';
+                tr.innerHTML = `
+                    <td class="p-2.5 font-bold text-white">${fw.title}</td>
+                    <td class="p-2.5 text-hack-cyan">${fw.chip}</td>
+                    <td class="p-2.5 text-center">
+                        <button onclick="deleteFirmwareItem('${fw.id}')" class="px-2 py-1 bg-red-950 text-red-400 border border-red-800 rounded hover:bg-red-900 text-[10px]">
+                            <i class="fa-solid fa-trash"></i> Xóa
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addNewFirmwareItem() {
+            const title = document.getElementById('newFwTitle').value.trim();
+            const chip = document.getElementById('newFwChip').value;
+            const offset = document.getElementById('newFwOffset').value;
+            const url = document.getElementById('newFwUrl').value.trim() || 'firmwares/custom.bin';
+            const img = document.getElementById('newFwImage').value.trim() || 'https://placehold.co/400x250/080d1a/ff0033?text=NEW';
+            const desc = document.getElementById('newFwDesc').value.trim() || 'Được thêm bởi Admin.';
+
+            if (!title) { alert('Nhập tên Firmware!'); return; }
+
+            firmwareDatabase.unshift({ id: 'fw-' + Date.now(), title, chip, offset, desc, url, img });
+            renderFirmwares();
+            renderAdminTable();
+            document.getElementById('newFwTitle').value = '';
+            alert('Thêm thành công!');
+        }
+
+        function deleteFirmwareItem(id) {
+            if (confirm('Xóa firmware này?')) {
+                firmwareDatabase = firmwareDatabase.filter(f => f.id !== id);
+                renderFirmwares();
+                renderAdminTable();
+            }
+        }
+
+        window.addEventListener('load', () => { renderFirmwares(); });
+    </script>
+</body>
+</html>
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Single deploy job since we're just deploying
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload entire repository
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
